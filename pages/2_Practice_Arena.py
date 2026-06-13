@@ -1,73 +1,55 @@
 import streamlit as st
+from utils.db import save_practice
+from utils.helpers import analyze_speaking_text
 
-st.title("🎯 Practice Arena")
-st.write(f"{st.session_state.avatar} Complete one quick mission.")
+st.title("🎙️ Practice Arena")
+st.caption("Speak your answer, then get instant constructive feedback.")
 
-lesson = st.selectbox(
-    "Choose lesson",
-    ["Communication Quest", "Teamwork Trail", "Interview Arena"]
+prompt = st.selectbox(
+    "Choose a workplace challenge",
+    [
+        "A teammate misses a deadline. What would you say and do?",
+        "You disagree with your manager in a meeting. How would you respond respectfully?",
+        "Introduce yourself in a mock interview and explain one strength.",
+        "A customer is upset. How would you calm the situation?",
+    ],
 )
 
-if lesson == "Communication Quest":
-    st.subheader("Mission 1")
-    st.write("A classmate interrupts you during a group presentation. What do you do?")
-    ans = st.radio(
-        "Pick your move",
-        [
-            "Stop talking and get angry.",
-            "Calmly continue, then address it respectfully after the presentation.",
-            "Leave the presentation."
-        ],
-        key="comm_q1"
-    )
-    if st.button("Check Answer", key="comm_btn"):
-        if ans == "Calmly continue, then address it respectfully after the presentation.":
-            st.success("Great choice! +15 XP")
-            st.balloons()
-            st.session_state.xp += 15
-            st.session_state.skill_scores["Communication"] += 3
-        else:
-            st.error("Not the best choice. Try a calm and professional response.")
-            st.session_state.hearts = max(0, st.session_state.hearts - 1)
+st.markdown("### Record your response")
+audio_value = st.audio_input("Tap to record your answer")
 
-elif lesson == "Teamwork Trail":
-    st.subheader("Mission 2")
-    st.write("A teammate misses a deadline. What is the best next step?")
-    ans = st.radio(
-        "Choose",
-        [
-            "Blame them in front of everyone.",
-            "Discuss it privately and reset the task plan together.",
-            "Ignore the issue."
-        ],
-        key="team_q1"
-    )
-    if st.button("Check Answer", key="team_btn"):
-        if ans == "Discuss it privately and reset the task plan together.":
-            st.success("Excellent teamwork! +20 XP")
-            st.balloons()
-            st.session_state.xp += 20
-            st.session_state.skill_scores["Teamwork"] += 3
-            if "Team Titan" not in st.session_state.badges:
-                st.session_state.badges.append("Team Titan")
-        else:
-            st.error("Try again with a supportive and professional action.")
-            st.session_state.hearts = max(0, st.session_state.hearts - 1)
+typed_fallback = st.text_area(
+    "Or paste/type your answer here for now",
+    placeholder="If transcription is not connected yet, type the answer here to test the feedback engine.",
+    height=160,
+)
 
-else:
-    st.subheader("Mission 3")
-    st.write("Interview prompt: Tell me about yourself.")
-    answer = st.text_area("Type your answer")
-    if st.button("Score My Answer"):
-        if len(answer.strip()) > 40:
-            st.success("Nice job! You sound more prepared. +20 XP")
-            st.balloons()
-            st.session_state.xp += 20
-            st.session_state.skill_scores["Confidence"] += 4
-            if "Interview Champ" not in st.session_state.badges:
-                st.session_state.badges.append("Interview Champ")
-        else:
-            st.warning("Add more detail about your strengths, background, and goals.")
+if audio_value:
+    st.audio(audio_value)
+    st.info("Audio captured successfully. For this version, use the typed response box for analysis or connect your transcription backend next.")
 
-if st.session_state.xp >= 200:
-    st.session_state.level = 2
+if st.button("Analyze my answer", use_container_width=True):
+    if not typed_fallback.strip():
+        st.warning("Please record and also paste/type the transcript for analysis in this version.")
+    else:
+        result = analyze_speaking_text(typed_fallback)
+        save_practice(prompt, typed_fallback, result, result["score"])
+
+        a, b, c, d = st.columns(4)
+        a.metric("Clarity", f"{result['clarity']}/10")
+        b.metric("Confidence", f"{result['confidence']}/10")
+        c.metric("Structure", f"{result['structure']}/10")
+        d.metric("Relevance", f"{result['relevance']}/10")
+
+        st.success(f"Practice complete. You earned 25 XP. Overall speaking score: {result['score']}/100")
+
+        st.markdown("### What you did well")
+        for item in result["strengths"]:
+            st.markdown(f"- {item}")
+
+        st.markdown("### What to improve")
+        for item in result["improvements"]:
+            st.markdown(f"- {item}")
+
+        st.markdown("### Stronger sample answer")
+        st.info(result["improved_answer"])

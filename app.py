@@ -1,86 +1,201 @@
 import streamlit as st
+from utils.db import init_state, seed_data, add_friend, complete_assessment
+from utils.helpers import inject_css, level_from_score, progress_to_next_level
 
-st.set_page_config(page_title="Gallopi", page_icon="🐴", layout="wide")
+st.set_page_config(
+    page_title="Gallopi: Your Soft Skills Journey",
+    page_icon="🦙",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-if "username" not in st.session_state:
-    st.session_state.username = "Friend"
-if "xp" not in st.session_state:
-    st.session_state.xp = 120
-if "streak" not in st.session_state:
-    st.session_state.streak = 3
-if "level" not in st.session_state:
-    st.session_state.level = 1
-if "hearts" not in st.session_state:
-    st.session_state.hearts = 3
-if "avatar" not in st.session_state:
-    st.session_state.avatar = "🐴"
-if "badges" not in st.session_state:
-    st.session_state.badges = ["Starter Badge"]
-if "skill_scores" not in st.session_state:
-    st.session_state.skill_scores = {
-        "Communication": 72,
-        "Teamwork": 68,
-        "Confidence": 65,
-        "Professionalism": 74
-    }
+init_state()
+seed_data()
+inject_css()
 
-st.markdown("""
-<style>
-.block-container {padding-top: 1.5rem; padding-bottom: 2rem; max-width: 1100px;}
-.main-title {font-size: 3rem; font-weight: 800; color: #1f2937; margin-bottom: 0;}
-.sub-title {font-size: 1.2rem; color: #4b5563; margin-top: 0;}
-.hero-card {
-    background: linear-gradient(135deg, #8BE9C1, #A7D8FF, #FFE08A);
-    border-radius: 28px; padding: 28px; color: #123; margin: 16px 0 24px 0;
-}
-.stat-card {
-    background: white; border-radius: 22px; padding: 18px; text-align: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 2px solid #eef2f7;
-}
-.path-card {
-    background: #ffffff; border: 3px solid #d9f99d; border-radius: 22px;
-    padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 18px rgba(0,0,0,0.05);
-}
-.mini-label {font-size: 0.9rem; color: #6b7280;}
-.big-score {font-size: 2rem; font-weight: 800; color: #1f2937;}
-.avatar-pill {
-    display:inline-block; background:#fef3c7; border-radius:999px; padding:8px 14px;
-    font-weight:700; margin-bottom:12px;
-}
-</style>
-""", unsafe_allow_html=True)
+if "assessment_done" not in st.session_state:
+    st.session_state.assessment_done = False
 
-st.markdown(f"<div class='avatar-pill'>{st.session_state.avatar} Gallopi Guide</div>", unsafe_allow_html=True)
-st.markdown("<div class='main-title'>Gallopi</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Level up your soft skills, one mission at a time.</div>", unsafe_allow_html=True)
+if "show_friend_modal" not in st.session_state:
+    st.session_state.show_friend_modal = False
 
-st.markdown(f"""
-<div class='hero-card'>
-    <h2 style='margin:0;'>Welcome back, {st.session_state.username}! {st.session_state.avatar}</h2>
-    <p style='font-size:1.1rem; margin-top:10px;'>Your next mission is ready. Keep your streak alive and unlock new confidence powers.</p>
-</div>
-""", unsafe_allow_html=True)
+user = st.session_state.user
 
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.markdown(f"<div class='stat-card'><div class='mini-label'>Hearts</div><div class='big-score'>❤️ {st.session_state.hearts}</div></div>", unsafe_allow_html=True)
-with c2:
-    st.markdown(f"<div class='stat-card'><div class='mini-label'>Streak</div><div class='big-score'>🔥 {st.session_state.streak}</div></div>", unsafe_allow_html=True)
-with c3:
-    st.markdown(f"<div class='stat-card'><div class='mini-label'>XP</div><div class='big-score'>{st.session_state.xp}</div></div>", unsafe_allow_html=True)
-with c4:
-    st.markdown(f"<div class='stat-card'><div class='mini-label'>Level</div><div class='big-score'>Lv {st.session_state.level}</div></div>", unsafe_allow_html=True)
+top_left, top_mid, top_right = st.columns([1.2, 2, 1.2])
+with top_left:
+    st.markdown("<div class='brand'>🦙 <span>Gallopi</span></div>", unsafe_allow_html=True)
+with top_mid:
+    xp_pct = progress_to_next_level(user["xp"])
+    st.markdown(
+        f"""
+        <div class="hero-bar">
+            <div>
+                <div class="muted">Daily goal</div>
+                <div class="hero-title">{user["daily_goal"]} XP target</div>
+            </div>
+            <div class="xp-wrap">
+                <div class="xp-pill">🔥 {user["streak"]} day streak</div>
+                <div class="xp-pill">⚡ {user["xp"]} XP</div>
+                <div class="xp-pill">🏅 {user["level_name"]}</div>
+            </div>
+        </div>
+        <div class="progress-shell">
+            <div class="progress-fill" style="width:{xp_pct}%;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+with top_right:
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("➕ Add Friend", use_container_width=True):
+            st.session_state.show_friend_modal = not st.session_state.show_friend_modal
+    with c2:
+        st.button("🎯 Daily Quest", use_container_width=True)
 
-st.markdown("## Your journey path")
-st.progress(min(st.session_state.xp / 200, 1.0))
-st.caption(f"{st.session_state.xp} / 200 XP to next level")
+if st.session_state.show_friend_modal:
+    with st.container(border=True):
+        st.subheader("Add a friend")
+        friend_name = st.text_input("Friend name", placeholder="Aisha / Rahul / Sam")
+        friend_goal = st.selectbox("Friend vibe", ["Streak buddy", "Mock interview buddy", "Accountability partner"])
+        if st.button("Save friend"):
+            if friend_name.strip():
+                add_friend(friend_name.strip(), friend_goal)
+                st.success(f"{friend_name} added to your circle.")
+                st.session_state.show_friend_modal = False
+                st.rerun()
 
-st.markdown("<div class='path-card'><h3>🗣️ Communication Quest</h3><p>Practice professional replies and active listening.</p></div>", unsafe_allow_html=True)
-st.markdown("<div class='path-card'><h3>🤝 Teamwork Trail</h3><p>Handle conflict, deadlines, and collaboration challenges.</p></div>", unsafe_allow_html=True)
-st.markdown("<div class='path-card'><h3>💼 Interview Arena</h3><p>Train confidence with short recruiter-style questions.</p></div>", unsafe_allow_html=True)
+if not st.session_state.assessment_done:
+    st.markdown(
+        """
+        <div class="card hero-card">
+            <div class="tag">START HERE</div>
+            <h1>Find your current soft-skills level</h1>
+            <p>
+                Take a quick baseline check so Gallopi can adapt your challenges,
+                speaking drills, and feedback style to your current level.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-st.page_link("pages/1_Avatar_Zone.py", label="Choose Avatar", icon="🎭")
-st.page_link("pages/2_Practice_Arena.py", label="Start Lesson", icon="🎯")
-st.page_link("pages/3_Leaderboard.py", label="Leaderboard", icon="🏆")
-st.page_link("pages/4_Badges.py", label="Badges", icon="🥇")
-st.page_link("pages/5_Profile.py", label="Profile", icon="👤")
+    with st.form("baseline_assessment"):
+        st.subheader("Quick baseline test")
+        q1 = st.slider("How confident are you in speaking up during team discussions?", 1, 5, 3)
+        q2 = st.slider("How well do you handle conflict or missed deadlines?", 1, 5, 3)
+        q3 = st.slider("How clearly can you explain your ideas in a structured way?", 1, 5, 3)
+        q4 = st.slider("How comfortable are you in mock interviews or presentations?", 1, 5, 3)
+        q5 = st.selectbox(
+            "What sounds most like you right now?",
+            [
+                "I need help expressing myself clearly.",
+                "I can speak, but I need more structure and confidence.",
+                "I speak fairly well and want polishing, precision, and presence.",
+            ],
+        )
+        submitted = st.form_submit_button("Unlock my path")
+
+    if submitted:
+        score = q1 + q2 + q3 + q4
+        if q5.startswith("I need help"):
+            score += 2
+        elif q5.startswith("I can speak"):
+            score += 4
+        else:
+            score += 6
+
+        band = level_from_score(score)
+        complete_assessment(score, band)
+        st.success(f"You’ve been placed into {band}. Your dashboard and practice path are now personalized.")
+        st.rerun()
+
+else:
+    left, right = st.columns([1.45, 1])
+
+    with left:
+        st.markdown(
+            f"""
+            <div class="card welcome-card">
+                <div class="tag">TODAY'S MISSION</div>
+                <h2>Welcome back, {user["name"]} 👋</h2>
+                <p>You are currently in the <b>{user["level_name"]}</b> path. Keep your streak alive with one speaking rep today.</p>
+                <div class="stats-grid">
+                    <div class="stat-box"><span>🔥</span><strong>{user["streak"]}d</strong><label>Streak</label></div>
+                    <div class="stat-box"><span>⚡</span><strong>{user["xp"]}</strong><label>XP</label></div>
+                    <div class="stat-box"><span>🏆</span><strong>{len(st.session_state.badges)}</strong><label>Badges</label></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("### Choose your next practice")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown(
+                """
+                <div class="mini-card">
+                    <div class="emoji">🎙️</div>
+                    <h4>Speak Up</h4>
+                    <p>Record your answer to a real workplace prompt and get analysis.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with c2:
+            st.markdown(
+                """
+                <div class="mini-card">
+                    <div class="emoji">🧠</div>
+                    <h4>Quick Reflex</h4>
+                    <p>Short scenario drills for confidence and response agility.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with c3:
+            st.markdown(
+                """
+                <div class="mini-card">
+                    <div class="emoji">🤝</div>
+                    <h4>Friend Challenge</h4>
+                    <p>Compete on streaks, XP, and shared practice goals.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.info("Use the left sidebar pages to open Speaking Practice, Leaderboard, Badges, and Profile.")
+
+    with right:
+        st.markdown(
+            """
+            <div class="card side-card">
+                <div class="tag">WHY THIS FEELS BETTER</div>
+                <h3>More Duolingo-like interaction</h3>
+                <ul>
+                    <li>Placement first.</li>
+                    <li>Speaking reps over passive MCQs.</li>
+                    <li>Immediate constructive feedback.</li>
+                    <li>XP, streaks, friend loop, and unlocks.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.session_state.friends:
+            st.markdown("### Friend circle")
+            for friend in st.session_state.friends[:4]:
+                st.markdown(
+                    f"""
+                    <div class="friend-row">
+                        <div>
+                            <strong>{friend['name']}</strong>
+                            <div class="muted">{friend['type']}</div>
+                        </div>
+                        <div class="xp-pill">🔥 {friend['streak']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )

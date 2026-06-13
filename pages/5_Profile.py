@@ -2,15 +2,19 @@ import streamlit as st
 import pandas as pd
 
 st.title("👤 Profile")
-st.write(f"Avatar: {st.session_state.avatar}")
-st.write(f"Name: {st.session_state.username}")
-st.write(f"XP: {st.session_state.xp}")
-st.write(f"Level: {st.session_state.level}")
-st.write(f"Hearts: {st.session_state.hearts}")
-st.write(f"Streak: {st.session_state.streak}")
+user = st.session_state.user
 
-scores = pd.DataFrame(
-    list(st.session_state.skill_scores.items()),
-    columns=["Skill", "Score"]
-)
-st.dataframe(scores, use_container_width=True)
+left, right = st.columns([1, 1.2])
+with left:
+    st.subheader(user["name"])
+    st.write(f"Path: {user['path']}")
+    st.write(f"XP: {user['xp']}")
+    st.write(f"Streak: {user['streak']}")
+    st.write(f"Friends: {user['friends_count']}")
+with right:
+    st.subheader("Practice history")
+    if st.session_state.practice_history:
+        df = pd.DataFrame(st.session_state.practice_history)
+        st.dataframe(df[["prompt", "score"]], use_container_width=True)
+    else:
+        st.info("No practice attempts yet.")
