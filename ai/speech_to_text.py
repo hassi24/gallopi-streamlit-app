@@ -1,12 +1,9 @@
-from openai import OpenAI
-import streamlit as st
+import speech_recognition as sr
 import tempfile
 
-client = OpenAI(
-    api_key=st.secrets["OPENAI_API_KEY"]
-)
-
 def transcribe_audio(audio_file):
+
+    recognizer = sr.Recognizer()
 
     with tempfile.NamedTemporaryFile(
         delete=False,
@@ -14,13 +11,20 @@ def transcribe_audio(audio_file):
     ) as tmp:
 
         tmp.write(audio_file.read())
-        tmp_path = tmp.name
+        path = tmp.name
 
-    with open(tmp_path, "rb") as audio:
+    with sr.AudioFile(path) as source:
 
-        transcript = client.audio.transcriptions.create(
-            model="gpt-4o-mini-transcribe",
-            file=audio
+        audio = recognizer.record(source)
+
+    try:
+
+        text = recognizer.recognize_google(
+            audio
         )
 
-    return transcript.text
+        return text
+
+    except Exception:
+
+        return ""

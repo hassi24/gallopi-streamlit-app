@@ -2,5 +2,7 @@ streamlit
 pandas
 plotly
 textblob
-openai
+google-generativeai
+SpeechRecognition
+pydub
 python-dotenv

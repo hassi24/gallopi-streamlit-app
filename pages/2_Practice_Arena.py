@@ -1,7 +1,7 @@
 import streamlit as st
 
-from ai.speech_to_text import transcribe_audio
 from ai.ai_feedback import analyze_answer
+from ai.speech_to_text import transcribe_audio
 
 from utils.db import save_practice
 
@@ -12,11 +12,11 @@ st.set_page_config(
 )
 
 st.title("🎙️ Practice Arena")
-st.caption("Level up your communication skills with AI-powered coaching")
+st.caption("Practice workplace communication and get AI coaching")
 
-# ====================================
-# CHALLENGE DATABASE
-# ====================================
+# ==========================================
+# CHALLENGE BANK
+# ==========================================
 
 CHALLENGES = {
 
@@ -24,17 +24,20 @@ CHALLENGES = {
 
         "Level 1": [
             "Introduce yourself to a new teammate.",
-            "Tell us about one of your strengths."
+            "Tell us about one of your strengths.",
+            "Describe your communication style."
         ],
 
         "Level 2": [
+            "How would you handle a misunderstanding?",
             "How would you give constructive feedback?",
-            "How would you handle a misunderstanding?"
+            "How would you ask for help professionally?"
         ],
 
         "Level 3": [
-            "How would you resolve a conflict in a team?",
-            "How would you communicate bad news professionally?"
+            "How would you resolve team conflict?",
+            "How would you communicate bad news?",
+            "How would you manage expectations?"
         ]
     },
 
@@ -42,29 +45,32 @@ CHALLENGES = {
 
         "Level 1": [
             "Tell me about yourself.",
-            "Why do you want this role?"
+            "Why do you want this role?",
+            "What motivates you?"
         ],
 
         "Level 2": [
             "Describe a challenge you overcame.",
+            "Tell me about a failure.",
             "What are your strengths and weaknesses?"
         ],
 
         "Level 3": [
-            "Describe a time you showed leadership.",
-            "Tell me about a difficult decision."
+            "Describe a leadership experience.",
+            "Tell me about a difficult decision.",
+            "Describe a conflict you resolved."
         ]
     },
 
     "🤝 Teamwork World": {
 
         "Level 1": [
-            "How do you work in teams?",
-            "Describe a successful collaboration."
+            "Describe a successful team project.",
+            "How do you collaborate with others?"
         ],
 
         "Level 2": [
-            "A teammate is not contributing. What would you do?",
+            "A teammate is not contributing. What do you do?",
             "How would you motivate your team?"
         ],
 
@@ -87,36 +93,36 @@ CHALLENGES = {
         ],
 
         "Level 3": [
-            "How would you handle a major crisis?",
+            "How would you handle a crisis?",
             "Describe a difficult leadership decision."
         ]
     }
 }
 
-# ====================================
+# ==========================================
 # WORLD SELECTION
-# ====================================
+# ==========================================
 
 world = st.selectbox(
-    "Choose Learning World",
+    "🌎 Choose Learning World",
     list(CHALLENGES.keys())
 )
 
 level = st.selectbox(
-    "Choose Level",
+    "📈 Choose Level",
     list(CHALLENGES[world].keys())
 )
 
 question = st.selectbox(
-    "Choose Challenge",
+    "🎯 Choose Challenge",
     CHALLENGES[world][level]
 )
 
 st.markdown("---")
 
-# ====================================
-# RECORD SECTION
-# ====================================
+# ==========================================
+# RECORD AUDIO
+# ==========================================
 
 st.subheader("🎤 Record Your Answer")
 
@@ -145,22 +151,22 @@ if audio_value:
         except Exception as e:
 
             st.error(
-                f"Transcription error: {e}"
+                f"Transcription Error: {e}"
             )
 
-# ====================================
-# TRANSCRIPT
-# ====================================
+# ==========================================
+# EDIT TRANSCRIPT
+# ==========================================
 
 transcript = st.text_area(
-    "Transcript (edit if needed)",
+    "📝 Transcript (edit if needed)",
     value=transcript,
     height=220
 )
 
-# ====================================
-# ANALYSIS
-# ====================================
+# ==========================================
+# ANALYZE
+# ==========================================
 
 if st.button(
     "🚀 Analyze With AI",
@@ -170,13 +176,13 @@ if st.button(
     if not transcript.strip():
 
         st.warning(
-            "Please record an answer first."
+            "Please record your answer first."
         )
 
         st.stop()
 
     with st.spinner(
-        "Your AI coach is analyzing..."
+        "Gallopi AI is analyzing..."
     ):
 
         try:
@@ -199,30 +205,30 @@ if st.button(
 
             st.markdown("---")
 
-            c1,c2,c3,c4 = st.columns(4)
+            c1, c2, c3, c4 = st.columns(4)
 
             with c1:
                 st.metric(
-                    "📝 Clarity",
-                    f"{result['clarity']}/10"
+                    "Clarity",
+                    result["clarity"]
                 )
 
             with c2:
                 st.metric(
-                    "💪 Confidence",
-                    f"{result['confidence']}/10"
+                    "Confidence",
+                    result["confidence"]
                 )
 
             with c3:
                 st.metric(
-                    "🏗 Structure",
-                    f"{result['structure']}/10"
+                    "Structure",
+                    result["structure"]
                 )
 
             with c4:
                 st.metric(
-                    "🎯 Relevance",
-                    f"{result['relevance']}/10"
+                    "Relevance",
+                    result["relevance"]
                 )
 
             st.markdown("---")
@@ -231,18 +237,27 @@ if st.button(
                 "🌟 Strengths"
             )
 
-            for item in result["strengths"]:
-                st.success(item)
+            for strength in result["strengths"]:
+                st.success(strength)
 
             st.subheader(
-                "📈 Areas to Improve"
+                "📈 Areas To Improve"
             )
 
             for item in result["improvements"]:
                 st.warning(item)
 
             st.subheader(
-                "🤖 Improved Sample Answer"
+                "🎯 AI Coaching Tips"
+            )
+
+            if "coaching_tips" in result:
+
+                for tip in result["coaching_tips"]:
+                    st.info(tip)
+
+            st.subheader(
+                "🤖 Stronger Sample Answer"
             )
 
             st.info(
@@ -251,20 +266,16 @@ if st.button(
 
             st.markdown("---")
 
-            st.subheader(
-                "🏅 XP Earned"
-            )
-
             xp_reward = 25
 
             if level == "Level 2":
                 xp_reward = 40
 
-            if level == "Level 3":
+            elif level == "Level 3":
                 xp_reward = 60
 
             st.success(
-                f"You earned {xp_reward} XP!"
+                f"⚡ XP Earned: {xp_reward}"
             )
 
             st.balloons()
@@ -274,3 +285,28 @@ if st.button(
             st.error(
                 f"AI Analysis Error: {e}"
             )
+
+# ==========================================
+# PRACTICE HISTORY
+# ==========================================
+
+if "practice_history" in st.session_state:
+
+    history = st.session_state.practice_history
+
+    if history:
+
+        st.markdown("---")
+        st.subheader("📚 Recent Practice")
+
+        for item in reversed(history[-5:]):
+
+            with st.expander(item["prompt"]):
+
+                st.write(
+                    item["transcript"]
+                )
+
+                st.write(
+                    f"Score: {item['score']}"
+                )

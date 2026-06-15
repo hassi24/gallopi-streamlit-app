@@ -1,54 +1,49 @@
-from openai import OpenAI
 import streamlit as st
+import google.generativeai as genai
 import json
 
-client = OpenAI(
-    api_key=st.secrets["OPENAI_API_KEY"]
+genai.configure(
+    api_key=st.secrets["GEMINI_API_KEY"]
 )
 
-def analyze_answer(prompt, transcript):
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role":"system",
-                "content":"""
-                You are an expert communication coach.
+def analyze_answer(question, transcript):
 
-                Return JSON only.
+    prompt = f"""
+You are Gallopi AI, an expert communication coach.
 
-                Evaluate:
+Question:
+{question}
 
-                clarity
-                confidence
-                structure
-                relevance
+User Answer:
+{transcript}
 
-                Score each out of 10.
+Return ONLY valid JSON in this format:
 
-                Also return:
-                strengths
-                improvements
-                improved_answer
+{{
+    "score": 85,
+    "clarity": 8,
+    "confidence": 8,
+    "structure": 7,
+    "relevance": 9,
+    "strengths": [
+        "Strength 1",
+        "Strength 2"
+    ],
+    "improvements": [
+        "Improvement 1",
+        "Improvement 2"
+    ],
+    "improved_answer": "A stronger version of the user's answer."
+}}
+"""
 
-                Return valid JSON.
-                """
-            },
-            {
-                "role":"user",
-                "content":f"""
-                Question:
-                {prompt}
+    response = model.generate_content(prompt)
 
-                Answer:
-                {transcript}
-                """
-            }
-        ],
-        response_format={"type":"json_object"}
-    )
+    text = response.text.strip()
 
-    return json.loads(
-        response.choices[0].message.content
-    )
+    # Remove markdown fences if Gemini returns them
+    text = text.replace("```json", "").replace("```", "").strip()
+
+    return json.loads(text)
